@@ -9,9 +9,9 @@ import os.path as osp
 
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-phi = 3
+phi = 1
 weighted_bifpn = False
-model_path = 'checkpoints/2020-02-20/csv_02_1.6506_2.5878_w.h5'
+model_path = 'checkpoints/colab_efficientdet.h5'
 image_sizes = (512, 640, 768, 896, 1024, 1280, 1408)
 image_size = image_sizes[phi]
 # classes = [
@@ -37,7 +37,7 @@ prediction_model.load_weights(model_path, by_name=True)
 
 import glob
 
-for image_path in glob.glob('datasets/ic15/test_images/*.jpg'):
+for image_path in glob.glob('datasets/*.png'):
     image = cv2.imread(image_path)
     src_image = image.copy()
     image = image[:, :, ::-1]
