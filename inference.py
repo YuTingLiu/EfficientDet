@@ -11,16 +11,17 @@ from utils.draw_boxes import draw_boxes
 
 
 def main():
-    os.environ['CUDA_VISIBLE_DEVICES'] = '0'
+    # os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-    phi = 1
+    phi = 0
     weighted_bifpn = True
-    model_path = 'checkpoints/colab_efficientdet.h5'
+    weighted_bifpn = False #需要修改为False
+    model_path = 'checkpoints/pascal_01_0.6626_0.6726.h5'
     image_sizes = (512, 640, 768, 896, 1024, 1280, 1408)
     image_size = image_sizes[phi]
     # coco classes
     classes = {value['id'] - 1: value['name'] for value in json.load(open('coco_90.json', 'r')).values()}
-    num_classes = 90
+    num_classes = 20
     score_threshold = 0.3
     colors = [np.random.randint(0, 256, 3).tolist() for _ in range(num_classes)]
     _, model = efficientdet(phi=phi,
@@ -29,7 +30,7 @@ def main():
                             score_threshold=score_threshold)
     model.load_weights(model_path, by_name=True)
 
-    for image_path in glob.glob(r'G:\datasets\efficient-val\bechmark.png'):
+    for image_path in glob.glob(r'G:\datasets\efficient-val\*.png'):
         image = cv2.imread(image_path)
         src_image = image.copy()
         # BGR -> RGB
