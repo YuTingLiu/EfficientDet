@@ -146,6 +146,7 @@ def multi_scale(image, annotations, prob=1.):
         if 'quadrangles' in annotations and annotations['quadrangles'].shape[0] != 0:
             quadrangles = annotations['quadrangles']
             annotations['quadrangles'] = np.round(quadrangles * scale)
+    # print(h,w,scale,nh,nw)
     return image, annotations
 
 

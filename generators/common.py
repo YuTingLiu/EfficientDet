@@ -267,7 +267,7 @@ class Generator(keras.utils.Sequence):
 
         if self.misc_effect is None:
             return image_group, annotations_group
-
+        
         for index in range(len(image_group)):
             # transform a single group entry
             image_group[index], annotations_group[index] = self.random_misc_group_entry(image_group[index],

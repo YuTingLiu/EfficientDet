@@ -217,14 +217,24 @@ class PascalVocGenerator(Generator):
 
 
 if __name__ == '__main__':
+    from augmentor.misc import MiscEffect
+    from augmentor.color import VisualEffect
+    misc_effect = MiscEffect(multi_scale_prob=0.9,
+                             rotate_prob=0.05,
+                             flip_prob=0.8,
+                             crop_prob=0.5,
+                             translate_prob=0.7,
+                             border_value=(128, 128, 128))
+
+    visual_effect = VisualEffect()
     train_generator = PascalVocGenerator(
-        'datasets/voc_trainval/VOC2007',
+        r'G:\datasets\PASCALVOC\VOC2012',
         'train',
         phi=0,
         skip_difficult=True,
         batch_size=1,
-        misc_effect=None,
-        visual_effect=None,
+        misc_effect=misc_effect,
+        visual_effect=visual_effect,
     )
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
@@ -254,14 +264,14 @@ if __name__ == '__main__':
         y1 = boxes[:, 1] + (deltas[:, 1] * std_[1] + mean_[1]) * height
         x2 = boxes[:, 2] + (deltas[:, 2] * std_[2] + mean_[2]) * width
         y2 = boxes[:, 3] + (deltas[:, 3] * std_[3] + mean_[3]) * height
-        for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, class_ids):
-            x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
-            cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
-            class_name = train_generator.labels[class_id]
-            label = class_name
-            ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
-            cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
-            cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        # for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, class_ids):
+        #     x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
+        #     cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
+        #     class_name = train_generator.labels[class_id]
+        #     label = class_name
+        #     ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
+        #     cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
+        #     cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
         cv2.imshow('image', image.astype(np.uint8)[..., ::-1])
         cv2.waitKey(0)
         # 36864, 46080, 48384, 48960, 49104
