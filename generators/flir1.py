@@ -21,7 +21,7 @@ from pycocotools.coco import COCO
 import cv2
 
 
-class CocoGenerator(Generator):
+class FlirGenerator(Generator):
     """
     Generate data from the COCO dataset.
     See https://github.com/cocodataset/cocoapi/tree/master/PythonAPI for more information.
@@ -37,15 +37,15 @@ class CocoGenerator(Generator):
         """
         self.data_dir = data_dir
         self.set_name = set_name
-        if set_name in ['train2017', 'val2017']:
-            self.coco = COCO(os.path.join(data_dir, 'annotations', 'instances_' + set_name + '.json'))
+        if set_name in ['training', 'validation']:
+            self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
         else:
-            self.coco = COCO(os.path.join(data_dir, 'annotations', 'image_info_' + set_name + '.json'))
+            self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
         self.image_ids = self.coco.getImgIds()
 
         self.load_classes()
 
-        super(CocoGenerator, self).__init__(**kwargs)
+        super(FlirGenerator, self).__init__(**kwargs)
 
     def load_classes(self):
         """
@@ -126,7 +126,8 @@ class CocoGenerator(Generator):
         """
         # {'license': 2, 'file_name': '000000259765.jpg', 'coco_url': 'http://images.cocodataset.org/test2017/000000259765.jpg', 'height': 480, 'width': 640, 'date_captured': '2013-11-21 04:02:31', 'id': 259765}
         image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
-        path = os.path.join(self.data_dir, self.set_name, image_info['file_name'])
+        path = os.path.join(self.data_dir, self.set_name, 'PreviewData', image_info['file_name']+'.jpeg')
+        print(path)
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
@@ -136,6 +137,8 @@ class CocoGenerator(Generator):
         """
         # get ground truth annotations
         annotations_ids = self.coco.getAnnIds(imgIds=self.image_ids[image_index], iscrowd=False)
+        print(image_index)
+        print(annotations_ids)
         annotations = {'labels': np.empty((0,), dtype=np.float32), 'bboxes': np.empty((0, 4), dtype=np.float32)}
 
         # some images appear to miss annotations (like image with id 257034)
@@ -150,20 +153,20 @@ class CocoGenerator(Generator):
                 continue
 
             annotations['labels'] = np.concatenate(
-                [annotations['labels'], [a['category_id'] - 1]], axis=0)
+                [annotations['labels'], [int(a['category_id']) - 1]], axis=0)
             annotations['bboxes'] = np.concatenate([annotations['bboxes'], [[
                 a['bbox'][0],
                 a['bbox'][1],
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
-
+        print("annotations:",annotations)
         return annotations
 
 if __name__ == '__main__':
-    train_generator = CocoGenerator(
-        r'G:\datasets\COCO',
-        'train2017',
+    train_generator = FlirGenerator(
+        r'G:\datasets\FLIR',
+        'training',
         phi=2,
         batch_size=1,
         misc_effect=None,
@@ -177,8 +180,9 @@ if __name__ == '__main__':
     print(train_generator.coco_labels_inverse)
     print(train_generator.classes)
     print(anchors)
+    print(train_generator.coco.getAnnIds())
     for batch_inputs, batch_targets in train_generator:
-        print(batch_targets[0].shape, batch_targets[1].shape)
+        # print(batch_targets[0].shape, batch_targets[1].shape)
         image = batch_inputs[0][0]
         image[..., 0] *= std[0]
         image[..., 1] *= std[1]
@@ -190,17 +194,17 @@ if __name__ == '__main__':
 
         regression = batch_targets[1][0]
         valid_ids = np.where(regression[:, -1] == 1)[0]
-        print("valid ids", valid_ids)
+        # print("valid ids", valid_ids)
         boxes = anchors[valid_ids]
         deltas = regression[valid_ids]
         # print(valid_ids)
         # print(batch_targets[1][0])
         # print(np.argmax(batch_targets[1][0][valid_ids], axis=1))
         class_ids = np.argmax(batch_targets[0][0][valid_ids][:,:-1], axis=1)
-        print("labels shape", batch_targets[0][0][valid_ids][:,:-1].shape)
-        print("regression",np.argmax(batch_targets[0][0][valid_ids][:,:-1],axis=1))
+        # print("labels shape", batch_targets[0][0][valid_ids][:,:-1].shape)
+        # print("regression",np.argmax(batch_targets[0][0][valid_ids][:,:-1],axis=1))
         ids = [train_generator.coco_label_to_label(x+1) for x in class_ids]
-        print('cls', ids)
+        # print('cls', ids)
         mean_ = [0, 0, 0, 0]
         std_ = [0.2, 0.2, 0.2, 0.2]
 

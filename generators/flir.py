@@ -13,6 +13,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 """
+import json
 
 from generators.common import Generator
 import os
@@ -20,29 +21,6 @@ import numpy as np
 from six import raise_from
 import cv2
 import xml.etree.ElementTree as ET
-
-voc_classes = {
-    'aeroplane': 0,
-    'bicycle': 1,
-    'bird': 2,
-    'boat': 3,
-    'bottle': 4,
-    'bus': 5,
-    'car': 6,
-    'cat': 7,
-    'chair': 8,
-    'cow': 9,
-    'diningtable': 10,
-    'dog': 11,
-    'horse': 12,
-    'motorbike': 13,
-    'person': 14,
-    'pottedplant': 15,
-    'sheep': 16,
-    'sofa': 17,
-    'train': 18,
-    'tvmonitor': 19
-}
 
 
 def _findNode(parent, name, debug_name=None, parse=None):
@@ -60,9 +38,9 @@ def _findNode(parent, name, debug_name=None, parse=None):
     return result
 
 
-class PascalVocGenerator(Generator):
+class FlirGenerator(Generator):
     """
-    Generate data for a Pascal VOC dataset.
+    Generate data for a FLIR INF dataset.
 
     See http://host.robots.ox.ac.uk/pascal/VOC/ for more information.
     """
@@ -71,8 +49,8 @@ class PascalVocGenerator(Generator):
             self,
             data_dir,
             set_name,
-            classes=voc_classes,
-            image_extension='.jpg',
+            classes,
+            image_extension='.jpeg',
             skip_truncated=False,
             skip_difficult=False,
             **kwargs
@@ -92,8 +70,7 @@ class PascalVocGenerator(Generator):
         self.data_dir = data_dir
         self.set_name = set_name
         self.classes = classes
-        self.image_names = [l.strip().split(None, 1)[0] for l in
-                            open(os.path.join(data_dir, 'ImageSets', 'Main', set_name + '.txt')).readlines()]
+        self.image_names = [l.strip().split('.')[0] for l in os.listdir(os.path.join(data_dir,set_name,'Annotations'))]
         self.image_extension = image_extension
         self.skip_truncated = skip_truncated
         self.skip_difficult = skip_difficult
@@ -102,7 +79,7 @@ class PascalVocGenerator(Generator):
         for key, value in self.classes.items():
             self.labels[value] = key
 
-        super(PascalVocGenerator, self).__init__(**kwargs)
+        super(FlirGenerator, self).__init__(**kwargs)
 
     def size(self):
         """
@@ -144,7 +121,7 @@ class PascalVocGenerator(Generator):
         """
         Compute the aspect ratio for an image with image_index.
         """
-        path = os.path.join(self.data_dir, 'JPEGImages', self.image_names[image_index] + self.image_extension)
+        path = os.path.join(self.data_dir, 'PreviewData', self.image_names[image_index] + self.image_extension)
         image = cv2.imread(path)
         h, w = image.shape[:2]
         return float(w) / float(h)
@@ -153,17 +130,17 @@ class PascalVocGenerator(Generator):
         """
         Load an image at the image_index.
         """
-        path = os.path.join(self.data_dir, 'JPEGImages', self.image_names[image_index] + self.image_extension)
+        path = os.path.join(self.data_dir, 'PreviewData', self.image_names[image_index] + self.image_extension)
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
-    def __parse_annotation(self, element):
+    def __parse_annotation(self, ann):
         """
-        Parse an annotation given an XML element.
+        Parse an annotation
         """
-        truncated = _findNode(element, 'truncated', parse=int)
-        difficult = _findNode(element, 'difficult', parse=int)
+        truncated = 'truncated' in ann.keys()
+        difficult = 'difficult' in ann.keys()
 
         class_name = _findNode(element, 'name').text
         if class_name not in self.classes:
@@ -180,15 +157,15 @@ class PascalVocGenerator(Generator):
 
         return truncated, difficult, box, label
 
-    def __parse_annotations(self, xml_root):
+    def __parse_annotations(self, anns):
         """
         Parse all annotations under the xml_root.
         """
         annotations = {'labels': np.empty((0,), dtype=np.int32),
                        'bboxes': np.empty((0, 4))}
-        for i, element in enumerate(xml_root.iter('object')):
+        for i, ann in enumerate(anns):
             try:
-                truncated, difficult, box, label = self.__parse_annotation(element)
+                truncated, difficult, box, label = self.__parse_annotation(ann)
             except ValueError as e:
                 raise_from(ValueError('could not parse object #{}: {}'.format(i, e)), None)
 
@@ -206,10 +183,10 @@ class PascalVocGenerator(Generator):
         """
         Load annotations for an image_index.
         """
-        filename = self.image_names[image_index] + '.xml'
+        filename = self.image_names[image_index] + '.json'
         try:
-            tree = ET.parse(os.path.join(self.data_dir, 'Annotations', filename))
-            return self.__parse_annotations(tree.getroot())
+            jdata = json.load(open(os.path.join(self.data_dir, 'Annotations', filename),'r'))
+            return self.__parse_annotations(jdata)
         except ET.ParseError as e:
             raise_from(ValueError('invalid annotations file: {}: {}'.format(filename, e)), None)
         except ValueError as e:
@@ -239,8 +216,6 @@ if __name__ == '__main__':
     mean = [0.485, 0.456, 0.406]
     std = [0.229, 0.224, 0.225]
     anchors = train_generator.anchors
-    print(train_generator.labels)
-    print(anchors.shape)
     for batch_inputs, batch_targets in train_generator:
         image = batch_inputs[0][0]
         image[..., 0] *= std[0]
@@ -251,20 +226,14 @@ if __name__ == '__main__':
         image[..., 2] += mean[2]
         image *= 255.
 
-        regression = batch_targets[1][0]
+        regression = batch_targets[0][0]
         valid_ids = np.where(regression[:, -1] == 1)[0]
-        print("valid ids", valid_ids)
         boxes = anchors[valid_ids]
         deltas = regression[valid_ids]
-        # print(valid_ids)
-        # print(batch_targets[1][0])
-        # print(np.argmax(batch_targets[1][0][valid_ids], axis=1))
-        class_ids = np.argmax(batch_targets[0][0][valid_ids], axis=1)
-        print("labels shape", batch_targets[0][0][valid_ids][:,:-1].shape)
-        print("regression",np.argmax(batch_targets[0][0][valid_ids][:,:-1],axis=1))
-        print('cls', [train_generator.labels[x] for x in class_ids])
+        class_ids = np.argmax(batch_targets[1][0][valid_ids], axis=-1)
         mean_ = [0, 0, 0, 0]
         std_ = [0.2, 0.2, 0.2, 0.2]
+
         width = boxes[:, 2] - boxes[:, 0]
         height = boxes[:, 3] - boxes[:, 1]
 
@@ -272,14 +241,14 @@ if __name__ == '__main__':
         y1 = boxes[:, 1] + (deltas[:, 1] * std_[1] + mean_[1]) * height
         x2 = boxes[:, 2] + (deltas[:, 2] * std_[2] + mean_[2]) * width
         y2 = boxes[:, 3] + (deltas[:, 3] * std_[3] + mean_[3]) * height
-        for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, class_ids):
-            x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
-            cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
-            class_name = train_generator.labels[class_id]
-            label = class_name
-            ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
-            cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
-            cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+        # for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, class_ids):
+        #     x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
+        #     cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
+        #     class_name = train_generator.labels[class_id]
+        #     label = class_name
+        #     ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
+        #     cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
+        #     cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
         cv2.imshow('image', image.astype(np.uint8)[..., ::-1])
         cv2.waitKey(0)
         # 36864, 46080, 48384, 48960, 49104
