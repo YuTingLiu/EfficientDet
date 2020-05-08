@@ -152,11 +152,14 @@ class FlirGenerator(Generator):
         Load an image at the image_index.
         """
         # {'license': 2, 'file_name': '000000259765.jpg', 'coco_url': 'http://images.cocodataset.org/test2017/000000259765.jpg', 'height': 480, 'width': 640, 'date_captured': '2013-11-21 04:02:31', 'id': 259765}
-        image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
-        path = os.path.join(self.data_dir, self.set_name, 'PreviewData', image_info['file_name']+'.jpeg')
-        # print(path)
-        image = cv2.imread(path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        try:
+            image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
+            path = os.path.join(self.data_dir, self.set_name, 'PreviewData', image_info['file_name']+'.jpeg')
+            # print(path)
+            image = cv2.imread(path)
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        except Exception as e:
+            print(e, path)
         return image
 
     def load_annotations(self, image_index):
