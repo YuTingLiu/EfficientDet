@@ -64,9 +64,9 @@ class FlirGenerator(Generator):
         self.set_name = set_name
         if set_name in ['training', 'validation']:
             flir_anns_union(data_dir, set_name)
-            self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
+            self.coco = COCO(os.path.join(data_dir, set_name, set_name + '_un.json'))
         else:
-            self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
+            self.coco = COCO(os.path.join(data_dir, set_name, set_name + '_un.json'))
         self.image_ids = self.coco.getImgIds()
 
         self.load_classes()
