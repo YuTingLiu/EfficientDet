@@ -153,7 +153,7 @@ class FlirGenerator(Generator):
         # {'license': 2, 'file_name': '000000259765.jpg', 'coco_url': 'http://images.cocodataset.org/test2017/000000259765.jpg', 'height': 480, 'width': 640, 'date_captured': '2013-11-21 04:02:31', 'id': 259765}
         image_info = self.coco.loadImgs(self.image_ids[image_index])[0]
         path = os.path.join(self.data_dir, self.set_name, 'PreviewData', image_info['file_name']+'.jpeg')
-        print(path)
+        # print(path)
         image = cv2.imread(path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
@@ -163,8 +163,8 @@ class FlirGenerator(Generator):
         """
         # get ground truth annotations
         annotations_ids = self.coco.getAnnIds(imgIds=self.image_ids[image_index], iscrowd=False)
-        print(image_index)
-        print(annotations_ids)
+        # print(image_index)
+        # print(annotations_ids)
         annotations = {'labels': np.empty((0,), dtype=np.float32), 'bboxes': np.empty((0, 4), dtype=np.float32)}
 
         # some images appear to miss annotations (like image with id 257034)
@@ -186,7 +186,7 @@ class FlirGenerator(Generator):
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
-        print("annotations:",annotations)
+        #print("annotations:",annotations)
         return annotations
 
 if __name__ == '__main__':
