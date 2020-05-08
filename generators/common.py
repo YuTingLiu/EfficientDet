@@ -218,6 +218,51 @@ class Generator(keras.utils.Sequence):
 
         return filtered_image_group, filtered_annotations_group
 
+    def stiching_image(self, image_group, annotations_group, group):
+        """
+        Stitching images,
+        """
+        # test all annotations
+        filtered_image_group = []
+        filtered_annotations_group = []
+        for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
+            image_height = image.shape[0]
+            image_width = image.shape[1]
+            # x1
+            annotations['bboxes'][:, 0] = np.clip(annotations['bboxes'][:, 0], 0, image_width - 2)
+            # y1
+            annotations['bboxes'][:, 1] = np.clip(annotations['bboxes'][:, 1], 0, image_height - 2)
+            # x2
+            annotations['bboxes'][:, 2] = np.clip(annotations['bboxes'][:, 2], 1, image_width - 1)
+            # y2
+            annotations['bboxes'][:, 3] = np.clip(annotations['bboxes'][:, 3], 1, image_height - 1)
+            # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
+            small_indices = np.where(
+                (annotations['bboxes'][:, 2] - annotations['bboxes'][:, 0] < 3) |
+                (annotations['bboxes'][:, 3] - annotations['bboxes'][:, 1] < 3)
+            )[0]
+
+            # delete invalid indices
+            if len(small_indices):
+                for k in annotations_group[index].keys():
+                    annotations_group[index][k] = np.delete(annotations[k], small_indices, axis=0)
+                # import cv2
+                # for invalid_index in small_indices:
+                #     x1, y1, x2, y2 = annotations['bboxes'][invalid_index]
+                #     label = annotations['labels'][invalid_index]
+                #     class_name = self.labels[label]
+                #     print('width: {}'.format(x2 - x1))
+                #     print('height: {}'.format(y2 - y1))
+                #     cv2.rectangle(image, (int(round(x1)), int(round(y1))), (int(round(x2)), int(round(y2))), (0, 255, 0), 2)
+                #     cv2.putText(image, class_name, (int(round(x1)), int(round(y1))), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 1)
+                # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+                # cv2.imshow('image', image)
+                # cv2.waitKey(0)
+            filtered_image_group.append(image)
+            filtered_annotations_group.append(annotations_group[index])
+
+        return filtered_image_group, filtered_annotations_group
+
     def load_image_group(self, group):
         """
         Load images for all images in a group.

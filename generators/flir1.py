@@ -24,13 +24,19 @@ import json
 def flir_anns_union(data_dir, set_name):
     path = os.path.join(data_dir, set_name, "Annotations")
     js = os.listdir(path)
+    print(js)
     label_ids = [1,2,3]
     images = []
     annotations = []
     categories = json.load(open(os.path.join(data_dir, set_name, 'catids.json'), 'r'))
     for f in js:
         jd = json.load(open(os.path.join(path, f), 'r'))
-        images.append(jd['image'])
+        if set_name == "validation":
+            images.append({'file_name': f.split('.')[0], \
+                           'height': jd['image']['height'], \
+                           'id': jd['image']['id'], 'width': jd['image']['width']})
+        else:
+            images.append(jd['image'])
         newanns = []
         for ann in jd['annotation']:
             ann['category_id'] = int(ann['category_id'])
@@ -64,6 +70,7 @@ class FlirGenerator(Generator):
         self.data_dir = data_dir
         self.set_name = set_name
         if set_name in ['training', 'validation']:
+            print(data_dir, set_name)
             flir_anns_union(data_dir, set_name)
             self.coco = COCO(os.path.join(data_dir, set_name, set_name + '_un.json'))
         else:
@@ -160,6 +167,7 @@ class FlirGenerator(Generator):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         except Exception as e:
             print(e, path)
+            raise e
         return image
 
     def load_annotations(self, image_index):
@@ -196,7 +204,7 @@ class FlirGenerator(Generator):
 if __name__ == '__main__':
     train_generator = FlirGenerator(
         r'G:\datasets\FLIR',
-        'training',
+        'validation',
         phi=2,
         batch_size=1,
         misc_effect=None,
