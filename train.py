@@ -210,6 +210,24 @@ def create_generators(args):
             shuffle_groups=False,
             **common_args
         )
+    elif args.dataset_type == 'flir':
+        # import here to prevent unnecessary dependency on cocoapi
+        from generators.flir1 import FlirGenerator
+        train_generator = FlirGenerator(
+            args.flir_path,
+            'training',
+            misc_effect=misc_effect,
+            visual_effect=visual_effect,
+            group_method='random',
+            **common_args
+        )
+
+        validation_generator = FlirGenerator(
+            args.flir_path,
+            'validation',
+            shuffle_groups=False,
+            **common_args
+        )
     else:
         raise ValueError('Invalid data type received: {}'.format(args.dataset_type))
 
@@ -249,6 +267,9 @@ def parse_args(args):
 
     coco_parser = subparsers.add_parser('coco')
     coco_parser.add_argument('coco_path', help='Path to dataset directory (ie. /tmp/COCO).')
+
+    flir_parser = subparsers.add_parser('flir')
+    flir_parser.add_argument('flir_path', help='Path to dataset directory (ie. /tmp/FLIR).')
 
     pascal_parser = subparsers.add_parser('pascal')
     pascal_parser.add_argument('pascal_path', help='Path to dataset directory (ie. /tmp/VOCdevkit).')

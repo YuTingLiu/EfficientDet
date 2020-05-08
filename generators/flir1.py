@@ -19,7 +19,32 @@ import os
 import numpy as np
 from pycocotools.coco import COCO
 import cv2
+import json
 
+def flir_anns_union(data_dir, set_name):
+    path = os.path.join(data_dir, set_name, "Annotations")
+    js = os.listdir(path)
+    images = []
+    annotations = []
+    categories = json.load(open(os.path.join(data_dir, set_name, 'catids.json'), 'r'))
+    for f in js:
+        jd = json.load(open(os.path.join(path, f), 'r'))
+        images.append(jd['image'])
+        newanns = []
+        for ann in jd['annotation']:
+            ann['category_id'] = int(ann['category_id'])
+            newanns.append(ann)
+        annotations.extend(newanns)
+    newanns = []
+    for idx, ann in enumerate(annotations):
+        ann['id'] = idx
+        newanns.append(ann)
+    label_ids = [1,2,3,18]
+    json.dump({
+        "images":images,
+        "annotations":newanns,
+        "categories":[x for x in categories if x['id'] in label_ids]
+    }, open(os.path.join(data_dir, set_name, "{}_un.json".format(set_name)), 'w'))
 
 class FlirGenerator(Generator):
     """
@@ -38,6 +63,7 @@ class FlirGenerator(Generator):
         self.data_dir = data_dir
         self.set_name = set_name
         if set_name in ['training', 'validation']:
+            flir_anns_union(data_dir, set_name)
             self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
         else:
             self.coco = COCO(os.path.join(data_dir, 'annotations', set_name + '_un.json'))
