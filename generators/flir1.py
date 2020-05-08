@@ -110,7 +110,7 @@ class FlirGenerator(Generator):
     def num_classes(self):
         """ Number of classes in the dataset. For COCO this is 80.
         """
-        return 4
+        return 3
 
     def has_label(self, label):
         """ Return True if label is a known label.
