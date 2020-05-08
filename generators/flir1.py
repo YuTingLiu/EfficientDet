@@ -24,6 +24,7 @@ import json
 def flir_anns_union(data_dir, set_name):
     path = os.path.join(data_dir, set_name, "Annotations")
     js = os.listdir(path)
+    label_ids = [1,2,3]
     images = []
     annotations = []
     categories = json.load(open(os.path.join(data_dir, set_name, 'catids.json'), 'r'))
@@ -33,13 +34,13 @@ def flir_anns_union(data_dir, set_name):
         newanns = []
         for ann in jd['annotation']:
             ann['category_id'] = int(ann['category_id'])
-            newanns.append(ann)
+            if ann['category_id'] in label_ids:
+                newanns.append(ann)
         annotations.extend(newanns)
     newanns = []
     for idx, ann in enumerate(annotations):
         ann['id'] = idx
         newanns.append(ann)
-    label_ids = [1,2,3,18]
     json.dump({
         "images":images,
         "annotations":newanns,
@@ -102,7 +103,7 @@ class FlirGenerator(Generator):
     def num_classes(self):
         """ Number of classes in the dataset. For COCO this is 80.
         """
-        return 90
+        return 4
 
     def has_label(self, label):
         """ Return True if label is a known label.
