@@ -24,14 +24,14 @@ import json
 def flir_anns_union(data_dir, set_name):
     path = os.path.join(data_dir, set_name, "Annotations")
     js = os.listdir(path)
-    print(js)
+    #print(js)
     label_ids = [1,2,3]
     images = []
     annotations = []
     categories = json.load(open(os.path.join(data_dir, set_name, 'catids.json'), 'r'))
     for f in js:
         jd = json.load(open(os.path.join(path, f), 'r'))
-        if set_name == "validation":
+        if set_name != "training":
             images.append({'file_name': f.split('.')[0], \
                            'height': jd['image']['height'], \
                            'id': jd['image']['id'], 'width': jd['image']['width']})
@@ -69,7 +69,7 @@ class FlirGenerator(Generator):
         """
         self.data_dir = data_dir
         self.set_name = set_name
-        if set_name in ['training', 'validation']:
+        if set_name in ['training', 'validation', 'mytest']:
             print(data_dir, set_name)
             flir_anns_union(data_dir, set_name)
             self.coco = COCO(os.path.join(data_dir, set_name, set_name + '_un.json'))

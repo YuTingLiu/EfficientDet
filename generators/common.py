@@ -220,7 +220,7 @@ class Generator(keras.utils.Sequence):
 
     def stiching_image(self, image_group, annotations_group, group):
         """
-        Stitching images,
+        Stitching images, improve DOT performance
         """
         # test all annotations
         filtered_image_group = []
