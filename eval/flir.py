@@ -76,15 +76,15 @@ def evaluate(generator, model, threshold=0.01):
             # append detection to results
             results.append(image_result)
 
-            box = np.round(box).astype(np.int32)
-            class_name = generator.label_to_name(generator.coco_label_to_label(class_id + 1))
-            ret, baseline = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-            cv2.rectangle(src_image, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 1)
-            cv2.putText(src_image, class_name, (box[0], box[1] + box[3] - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-                        (0, 0, 0), 1)
-        cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        cv2.imshow('image', src_image)
-        cv2.waitKey(0)
+        #     box = np.round(box).astype(np.int32)
+        #     class_name = generator.label_to_name(generator.coco_label_to_label(class_id + 1))
+        #     ret, baseline = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        #     cv2.rectangle(src_image, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 1)
+        #     cv2.putText(src_image, class_name, (box[0], box[1] + box[3] - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+        #                 (0, 0, 0), 1)
+        # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+        # cv2.imshow('image', src_image)
+        # cv2.waitKey(0)
 
         # append image to list of processed images
         image_ids.append(generator.image_ids[index])
