@@ -91,15 +91,15 @@ def create_callbacks(training_model, prediction_model, validation_generator, arg
         callbacks.append(tensorboard_callback)
 
     if args.evaluation and validation_generator:
-        if args.dataset_type == 'coco':
-            from eval.coco import Evaluate
-            # use prediction model for evaluation
+        if args.dataset_type == 'flir':
+            from eval.flir import Evaluate
             evaluation = Evaluate(validation_generator, prediction_model, tensorboard=tensorboard_callback)
         elif args.dataset_type == 'pascal':
             from eval.pascal import Evaluate
             evaluation = Evaluate(validation_generator, prediction_model, tensorboard=tensorboard_callback)
-        elif args.dataset_type == 'flir':
-            from eval.flir import Evaluate
+        else:
+            from eval.coco import Evaluate
+            # use prediction model for evaluation
             evaluation = Evaluate(validation_generator, prediction_model, tensorboard=tensorboard_callback)
         callbacks.append(evaluation)
 

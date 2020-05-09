@@ -28,7 +28,7 @@ This project is released under the Apache License. Please take their licenses in
 ### train
 * STEP0: 新环境overlap计算会出现无法加载，`python setup.py build_ext --inplace`
 * STEP1: `python3 train.py --snapshot imagenet --phi {0, 1, 2, 3, 4, 5, 6} --gpu 0 --random-transform --compute-val-loss --freeze-backbone --batch-size 32 --steps 1000 pascal|coco datasets/VOC2012|datasets/coco` to start training. The init lr is 1e-3.
-* STEP2: `python3 train.py --snapshot xxx.h5 --phi {0, 1, 2, 3, 4, 5, 6} --gpu 0 --random-transform --compute-val-loss --freeze-bn --batch-size 4 --steps 10000 pascal|coco datasets/VOC2012|datasets/coco` to start training when val mAP can not increase during STEP1. The init lr is 1e-4 and decays to 1e-5 when val mAP keeps dropping down.
+* STEP2: `python train.py --snapshot /home/dc2-user/data/EfficientDet-TOD/checkpoints/2020-05-08/flir_43_0.5688_1.7523.h5 --phi 1 --gpu 0 --random-transform --compute-val-loss --freeze-bn --batch-size 16 --steps 10000 flir /home/dc2-user/data/FLIR` to start training when val mAP can not increase during STEP1. The init lr is 1e-4 and decays to 1e-5 when val mAP keeps dropping down.
 ## Evaluate
 1. PASCAL VOC
     * `python3 eval/common.py` to evaluate pascal model by specifying model path there.
