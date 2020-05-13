@@ -198,7 +198,7 @@ class FlirGenerator(Generator):
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
-        print("annotations:",annotations)
+        # print("annotations:",annotations)
         return annotations
 
 if __name__ == '__main__':
