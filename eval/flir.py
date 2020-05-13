@@ -27,7 +27,7 @@ import cv2
 from generators.flir1 import FlirGenerator
 
 
-def evaluate(generator, model, threshold=0.01):
+def evaluate(generator, model, threshold=0.01, debug=False):
     """
     Use the pycocotools to evaluate a COCO model on a dataset.
 
@@ -75,16 +75,17 @@ def evaluate(generator, model, threshold=0.01):
             }
             # append detection to results
             results.append(image_result)
+            box = np.round(box).astype(np.int32)
+            class_name = generator.label_to_name(generator.coco_label_to_label(class_id + 1))
+            ret, baseline = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+            cv2.rectangle(src_image, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 1)
+            cv2.putText(src_image, class_name, (box[0], box[1] + box[3] - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
+                        (0, 0, 0), 1)
 
-        #     box = np.round(box).astype(np.int32)
-        #     class_name = generator.label_to_name(generator.coco_label_to_label(class_id + 1))
-        #     ret, baseline = cv2.getTextSize(class_name, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
-        #     cv2.rectangle(src_image, (box[0], box[1]), (box[0] + box[2], box[1] + box[3]), (0, 255, 0), 1)
-        #     cv2.putText(src_image, class_name, (box[0], box[1] + box[3] - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
-        #                 (0, 0, 0), 1)
-        # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-        # cv2.imshow('image', src_image)
-        # cv2.waitKey(0)
+        if debug:
+            cv2.namedWindow('image', cv2.WINDOW_NORMAL)
+            cv2.imshow('image', src_image)
+            cv2.waitKey(0)
 
         # append image to list of processed images
         image_ids.append(generator.image_ids[index])
@@ -167,9 +168,9 @@ if __name__ == '__main__':
 
     os.environ['CUDA_VISIBLE_DEVICES'] = '0'
 
-    phi = 1
+    phi = 0
     weighted_bifpn = False
-    model_path = '../checkpoints/flir_43_0.5688_1.7523.h5'
+    model_path = '../checkpoints/flir_01_0.1774.h5'
     common_args = {
         'batch_size': 1,
         'phi': phi,
@@ -185,4 +186,4 @@ if __name__ == '__main__':
     model, prediction_model = efficientdet(phi=phi, num_classes=num_classes, weighted_bifpn=weighted_bifpn,
                                            score_threshold=0.01)
     prediction_model.load_weights(model_path, by_name=True)
-    evaluate(test_generator, prediction_model, threshold=0.01)
+    evaluate(test_generator, prediction_model, threshold=0.8, debug=True)

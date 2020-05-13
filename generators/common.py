@@ -220,22 +220,46 @@ class Generator(keras.utils.Sequence):
 
     def stiching_image(self, image_group, annotations_group, group):
         """
-        Stitching images, improve DOT performance
+        Stitching images, improve TOD performance
         """
+        def resize(imageToPredict, bboxes, targetSize = (416,416)):
+            y_ = imageToPredict.shape[0]
+            x_ = imageToPredict.shape[1]
+            x_scale = targetSize[1] / x_
+            y_scale = targetSize[0] / y_
+            img = cv2.resize(imageToPredict, targetSize)
+            img = np.array(img)
+
+            # original frame as named values
+            bboxes[:, 0] *= x_scale
+            bboxes[:, 1] *= y_scale
+            bboxes[:, 2] *= x_scale
+            bboxes[:, 3] *= y_scale
+            return img, bboxes
+
+        if len(image_group) < 4:
+            print("batch size <4")
+            return image_group, annotations_group
+        idx = list(range(len(image_group)))
+        np.random.shuffle(idx)
         # test all annotations
-        filtered_image_group = []
-        filtered_annotations_group = []
-        for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
-            image_height = image.shape[0]
-            image_width = image.shape[1]
+        stitching_image_group = [image_group[x] for x in idx][:4]
+        stitching_annotations_group = [annotations_group[x] for x in idx][:4]
+        img0_size = stitching_image_group[0].shape[:2]
+        mvs = [(0,0),(img0_size[1], 0),(0, img0_size[0]),(img0_size[1],img0_size[0])]
+        final = cv2.vconcat([cv2.hconcat([stitching_image_group[0], stitching_image_group[1]]), \
+                             cv2.hconcat([stitching_image_group[2], stitching_image_group[3]])])
+        #random img number
+        moved_ann_group = []
+        for index, (annotations, mv) in enumerate(zip(stitching_annotations_group, mvs)):
             # x1
-            annotations['bboxes'][:, 0] = np.clip(annotations['bboxes'][:, 0], 0, image_width - 2)
+            annotations['bboxes'][:, 0] += mv[0]
             # y1
-            annotations['bboxes'][:, 1] = np.clip(annotations['bboxes'][:, 1], 0, image_height - 2)
+            annotations['bboxes'][:, 1] += mv[1]
             # x2
-            annotations['bboxes'][:, 2] = np.clip(annotations['bboxes'][:, 2], 1, image_width - 1)
+            annotations['bboxes'][:, 2] += mv[0]
             # y2
-            annotations['bboxes'][:, 3] = np.clip(annotations['bboxes'][:, 3], 1, image_height - 1)
+            annotations['bboxes'][:, 3] += mv[1]
             # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
             small_indices = np.where(
                 (annotations['bboxes'][:, 2] - annotations['bboxes'][:, 0] < 3) |
@@ -246,22 +270,15 @@ class Generator(keras.utils.Sequence):
             if len(small_indices):
                 for k in annotations_group[index].keys():
                     annotations_group[index][k] = np.delete(annotations[k], small_indices, axis=0)
-                # import cv2
-                # for invalid_index in small_indices:
-                #     x1, y1, x2, y2 = annotations['bboxes'][invalid_index]
-                #     label = annotations['labels'][invalid_index]
-                #     class_name = self.labels[label]
-                #     print('width: {}'.format(x2 - x1))
-                #     print('height: {}'.format(y2 - y1))
-                #     cv2.rectangle(image, (int(round(x1)), int(round(y1))), (int(round(x2)), int(round(y2))), (0, 255, 0), 2)
-                #     cv2.putText(image, class_name, (int(round(x1)), int(round(y1))), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 1)
-                # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-                # cv2.imshow('image', image)
-                # cv2.waitKey(0)
-            filtered_image_group.append(image)
-            filtered_annotations_group.append(annotations_group[index])
-
-        return filtered_image_group, filtered_annotations_group
+            moved_ann_group.append(annotations)
+        union = {}
+        for key in moved_ann_group[0].keys():
+            union[key] = np.concatenate([x[key] for x in moved_ann_group])
+        final, bboxes = resize(final, union['bboxes'], img0_size)
+        union['bboxes'] = bboxes
+        image_group = [final] + image_group[1:]
+        annotations_group = [union] + annotations_group[1:]
+        return image_group, annotations_group
 
     def load_image_group(self, group):
         """
@@ -435,6 +452,9 @@ class Generator(keras.utils.Sequence):
 
         # check validity of annotations
         image_group, annotations_group = self.clip_transformed_annotations(image_group, annotations_group, group)
+
+        #stitcing images test
+        image_group, annotations_group = self.stiching_image(image_group, annotations_group, group)
 
         assert len(image_group) != 0
         assert len(image_group) == len(annotations_group)

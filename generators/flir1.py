@@ -198,15 +198,15 @@ class FlirGenerator(Generator):
                 a['bbox'][0] + a['bbox'][2],
                 a['bbox'][1] + a['bbox'][3],
             ]]], axis=0)
-        #print("annotations:",annotations)
+        print("annotations:",annotations)
         return annotations
 
 if __name__ == '__main__':
     train_generator = FlirGenerator(
         r'G:\datasets\FLIR',
         'validation',
-        phi=2,
-        batch_size=1,
+        phi=0,
+        batch_size=5,
         misc_effect=None,
         visual_effect=None,
     )
@@ -220,7 +220,7 @@ if __name__ == '__main__':
     print(anchors)
     print(train_generator.coco.getAnnIds())
     for batch_inputs, batch_targets in train_generator:
-        # print(batch_targets[0].shape, batch_targets[1].shape)
+        print(batch_targets[0].shape, batch_targets[1].shape)
         image = batch_inputs[0][0]
         image[..., 0] *= std[0]
         image[..., 1] *= std[1]
