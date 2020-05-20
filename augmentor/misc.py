@@ -6,7 +6,7 @@ from utils import reorder_vertexes
 
 def rotate(image, annotations, prob=0.5, border_value=(128, 128, 128)):
     assert 'bboxes' in annotations, 'annotations should contain bboxes even if it is empty'
-
+    #print('rotate')
     random_prob = np.random.uniform()
     if random_prob < (1 - prob):
         return image, annotations

@@ -147,8 +147,8 @@ class Generator(keras.utils.Sequence):
         for index, (image, annotations) in enumerate(zip(image_group, annotations_group)):
             # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
             invalid_indices = np.where(
-                (annotations['bboxes'][:, 2] <= annotations['bboxes'][:, 0]) |
-                (annotations['bboxes'][:, 3] <= annotations['bboxes'][:, 1]) |
+                # (annotations['bboxes'][:, 2] <= annotations['bboxes'][:, 0]) |
+                # (annotations['bboxes'][:, 3] <= annotations['bboxes'][:, 1]) |
                 (annotations['bboxes'][:, 0] < 0) |
                 (annotations['bboxes'][:, 1] < 0) |
                 (annotations['bboxes'][:, 2] <= 0) |
@@ -192,27 +192,7 @@ class Generator(keras.utils.Sequence):
             # y2
             annotations['bboxes'][:, 3] = np.clip(annotations['bboxes'][:, 3], 1, image_height - 1)
             # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
-            small_indices = np.where(
-                (annotations['bboxes'][:, 2] - annotations['bboxes'][:, 0] < 3) |
-                (annotations['bboxes'][:, 3] - annotations['bboxes'][:, 1] < 3)
-            )[0]
 
-            # delete invalid indices
-            if len(small_indices):
-                for k in annotations_group[index].keys():
-                    annotations_group[index][k] = np.delete(annotations[k], small_indices, axis=0)
-                # import cv2
-                # for invalid_index in small_indices:
-                #     x1, y1, x2, y2 = annotations['bboxes'][invalid_index]
-                #     label = annotations['labels'][invalid_index]
-                #     class_name = self.labels[label]
-                #     print('width: {}'.format(x2 - x1))
-                #     print('height: {}'.format(y2 - y1))
-                #     cv2.rectangle(image, (int(round(x1)), int(round(y1))), (int(round(x2)), int(round(y2))), (0, 255, 0), 2)
-                #     cv2.putText(image, class_name, (int(round(x1)), int(round(y1))), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (0, 0, 255), 1)
-                # cv2.namedWindow('image', cv2.WINDOW_NORMAL)
-                # cv2.imshow('image', image)
-                # cv2.waitKey(0)
             filtered_image_group.append(image)
             filtered_annotations_group.append(annotations_group[index])
 
@@ -242,6 +222,7 @@ class Generator(keras.utils.Sequence):
             return image_group, annotations_group
         idx = list(range(len(image_group)))
         np.random.shuffle(idx)
+        
         # test all annotations
         stitching_image_group = [image_group[x] for x in idx][:4]
         stitching_annotations_group = [annotations_group[x] for x in idx][:4]
@@ -252,25 +233,21 @@ class Generator(keras.utils.Sequence):
         #random img number
         moved_ann_group = []
         for index, (annotations, mv) in enumerate(zip(stitching_annotations_group, mvs)):
+            newann = {'labels': np.empty((0,), dtype=np.float32), 'bboxes': np.empty((0,4), dtype=np.float32)}
+            newann['labels'] = annotations['labels']
+            newann['bboxes'] = annotations['bboxes'].copy()
             # x1
-            annotations['bboxes'][:, 0] += mv[0]
+            newann['bboxes'][:, 0] = annotations['bboxes'][:, 0] + mv[0]
             # y1
-            annotations['bboxes'][:, 1] += mv[1]
+            newann['bboxes'][:, 1] = annotations['bboxes'][:, 1] + mv[1]
             # x2
-            annotations['bboxes'][:, 2] += mv[0]
+            newann['bboxes'][:, 2] = annotations['bboxes'][:, 2] + mv[0]
             # y2
-            annotations['bboxes'][:, 3] += mv[1]
+            newann['bboxes'][:, 3] = annotations['bboxes'][:, 3] + mv[1]
             # test x2 < x1 | y2 < y1 | x1 < 0 | y1 < 0 | x2 <= 0 | y2 <= 0 | x2 >= image.shape[1] | y2 >= image.shape[0]
-            small_indices = np.where(
-                (annotations['bboxes'][:, 2] - annotations['bboxes'][:, 0] < 3) |
-                (annotations['bboxes'][:, 3] - annotations['bboxes'][:, 1] < 3)
-            )[0]
-
-            # delete invalid indices
-            if len(small_indices):
-                for k in annotations_group[index].keys():
-                    annotations_group[index][k] = np.delete(annotations[k], small_indices, axis=0)
-            moved_ann_group.append(annotations)
+            # print('modified', newann['bboxes'])
+            # print('origin', annotations['bboxes'])
+            moved_ann_group.append(newann)
         union = {}
         for key in moved_ann_group[0].keys():
             union[key] = np.concatenate([x[key] for x in moved_ann_group])
@@ -541,10 +518,14 @@ class Generator(keras.utils.Sequence):
         # check validity of annotations
         image_group, annotations_group = self.clip_transformed_annotations(image_group, annotations_group, group)
 
+        #stitcing images test
+        image_group, annotations_group = self.stiching_image(image_group, annotations_group, group)
+
         assert len(image_group) != 0
         assert len(image_group) == len(annotations_group)
 
         # compute alphas for targets
-        self.compute_alphas_and_ratios(annotations_group)
+        if self.detect_quadrangle:
+            self.compute_alphas_and_ratios(annotations_group)
 
         return image_group, annotations_group

@@ -170,7 +170,7 @@ if __name__ == '__main__':
 
     phi = 0
     weighted_bifpn = False
-    model_path = '../checkpoints/flir_01_0.1774.h5'
+    model_path = '../checkpoints/flir_53_0.1443_0.6747.h5'
     common_args = {
         'batch_size': 1,
         'phi': phi,
@@ -186,4 +186,4 @@ if __name__ == '__main__':
     model, prediction_model = efficientdet(phi=phi, num_classes=num_classes, weighted_bifpn=weighted_bifpn,
                                            score_threshold=0.01)
     prediction_model.load_weights(model_path, by_name=True)
-    evaluate(test_generator, prediction_model, threshold=0.8, debug=True)
+    evaluate(test_generator, prediction_model, threshold=0.2, debug=True)

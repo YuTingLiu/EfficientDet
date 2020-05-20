@@ -20,6 +20,8 @@ import numpy as np
 from pycocotools.coco import COCO
 import cv2
 import json
+from augmentor.misc import MiscEffect
+from augmentor.color import VisualEffect
 
 def flir_anns_union(data_dir, set_name):
     path = os.path.join(data_dir, set_name, "Annotations")
@@ -38,6 +40,8 @@ def flir_anns_union(data_dir, set_name):
         else:
             images.append(jd['image'])
         newanns = []
+        if len(jd['annotation']) == 0:
+            print("found empty ann")
         for ann in jd['annotation']:
             ann['category_id'] = int(ann['category_id'])
             if ann['category_id'] in label_ids:
@@ -202,64 +206,86 @@ class FlirGenerator(Generator):
         return annotations
 
 if __name__ == '__main__':
+    misc_effect = MiscEffect(multi_scale_prob=0.9,
+                             rotate_prob=0.1,
+                             flip_prob=0.8,
+                             crop_prob=0.5,
+                             translate_prob=0.7,
+                             border_value=(128, 128, 128))
+
+    visual_effect = VisualEffect()
     train_generator = FlirGenerator(
         r'G:\datasets\FLIR',
-        'validation',
+        'training',
         phi=0,
         batch_size=5,
-        misc_effect=None,
-        visual_effect=None,
+        misc_effect=misc_effect,
+        visual_effect=visual_effect,
     )
-    mean = [0.485, 0.456, 0.406]
-    std = [0.229, 0.224, 0.225]
-    anchors = train_generator.anchors
-    print(train_generator.labels)
-    print(train_generator.coco_labels)
-    print(train_generator.coco_labels_inverse)
-    print(train_generator.classes)
-    print(anchors)
-    print(train_generator.coco.getAnnIds())
-    for batch_inputs, batch_targets in train_generator:
-        print(batch_targets[0].shape, batch_targets[1].shape)
-        image = batch_inputs[0][0]
-        image[..., 0] *= std[0]
-        image[..., 1] *= std[1]
-        image[..., 2] *= std[2]
-        image[..., 0] += mean[0]
-        image[..., 1] += mean[1]
-        image[..., 2] += mean[2]
-        image *= 255.
+    # mean = [0.485, 0.456, 0.406]
+    # std = [0.229, 0.224, 0.225]
+    # anchors = train_generator.anchors
+    # print(train_generator.labels)
+    # print(train_generator.coco_labels)
+    # print(train_generator.coco_labels_inverse)
+    # print(train_generator.classes)
+    # print(anchors)
+    # print(train_generator.coco.getAnnIds())
+    # for batch_inputs, batch_targets in train_generator:
+    #     print(batch_targets[0].shape, batch_targets[1].shape)
+    #     image = batch_inputs[0][0]
+    #     image[..., 0] *= std[0]
+    #     image[..., 1] *= std[1]
+    #     image[..., 2] *= std[2]
+    #     image[..., 0] += mean[0]
+    #     image[..., 1] += mean[1]
+    #     image[..., 2] += mean[2]
+    #     image *= 255.
+    #     print(image.dtype)
+    #
+    #     regression = batch_targets[1][0]
+    #     valid_ids = np.where(regression[:, -1] == 1)[0]
+    #     # print("valid ids", valid_ids)
+    #     boxes = anchors[valid_ids]
+    #     deltas = regression[valid_ids]
+    #     # print(valid_ids)
+    #     # print(batch_targets[1][0])
+    #     # print(np.argmax(batch_targets[1][0][valid_ids], axis=1))
+    #     class_ids = np.argmax(batch_targets[0][0][valid_ids][:,:-1], axis=1)
+    #     # print("labels shape", batch_targets[0][0][valid_ids][:,:-1].shape)
+    #     # print("regression",np.argmax(batch_targets[0][0][valid_ids][:,:-1],axis=1))
+    #     ids = [train_generator.coco_label_to_label(x+1) for x in class_ids]
+    #     # print('cls', ids)
+    #     mean_ = [0, 0, 0, 0]
+    #     std_ = [0.2, 0.2, 0.2, 0.2]
+    #
+    #     width = boxes[:, 2] - boxes[:, 0]
+    #     height = boxes[:, 3] - boxes[:, 1]
+    #     x1 = boxes[:, 0] + (deltas[:, 0] * std_[0] + mean_[0]) * width
+    #     y1 = boxes[:, 1] + (deltas[:, 1] * std_[1] + mean_[1]) * height
+    #     x2 = boxes[:, 2] + (deltas[:, 2] * std_[2] + mean_[2]) * width
+    #     y2 = boxes[:, 3] + (deltas[:, 3] * std_[3] + mean_[3]) * height
+    #     src_img = image.copy()
+    #     for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, ids):
+    #         if train_generator.has_label(class_id):
+    #             x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
+    #             cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
+    #             class_name = train_generator.labels[class_id]
+    #             label = class_name
+    #             ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
+    #             cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
+    #             cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+    #     cv2.imshow('image', cv2.hconcat([src_img.astype(np.uint8)[..., ::-1],image.astype(np.uint8)[..., ::-1]]))
+    #     cv2.waitKey(0)
 
-        regression = batch_targets[1][0]
-        valid_ids = np.where(regression[:, -1] == 1)[0]
-        # print("valid ids", valid_ids)
-        boxes = anchors[valid_ids]
-        deltas = regression[valid_ids]
-        # print(valid_ids)
-        # print(batch_targets[1][0])
-        # print(np.argmax(batch_targets[1][0][valid_ids], axis=1))
-        class_ids = np.argmax(batch_targets[0][0][valid_ids][:,:-1], axis=1)
-        # print("labels shape", batch_targets[0][0][valid_ids][:,:-1].shape)
-        # print("regression",np.argmax(batch_targets[0][0][valid_ids][:,:-1],axis=1))
-        ids = [train_generator.coco_label_to_label(x+1) for x in class_ids]
-        # print('cls', ids)
-        mean_ = [0, 0, 0, 0]
-        std_ = [0.2, 0.2, 0.2, 0.2]
-
-        width = boxes[:, 2] - boxes[:, 0]
-        height = boxes[:, 3] - boxes[:, 1]
-        x1 = boxes[:, 0] + (deltas[:, 0] * std_[0] + mean_[0]) * width
-        y1 = boxes[:, 1] + (deltas[:, 1] * std_[1] + mean_[1]) * height
-        x2 = boxes[:, 2] + (deltas[:, 2] * std_[2] + mean_[2]) * width
-        y2 = boxes[:, 3] + (deltas[:, 3] * std_[3] + mean_[3]) * height
-        for x1_, y1_, x2_, y2_, class_id in zip(x1, y1, x2, y2, ids):
-            if train_generator.has_label(class_id):
-                x1_, y1_, x2_, y2_ = int(x1_), int(y1_), int(x2_), int(y2_)
-                cv2.rectangle(image, (x1_, y1_), (x2_, y2_), (0, 255, 0), 2)
-                class_name = train_generator.labels[class_id]
-                label = class_name
-                ret, baseline = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.3, 1)
-                cv2.rectangle(image, (x1_, y2_ - ret[1] - baseline), (x1_ + ret[0], y2_), (255, 255, 255), -1)
-                cv2.putText(image, label, (x1_, y2_ - baseline), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
-        cv2.imshow('image', image.astype(np.uint8)[..., ::-1])
-        cv2.waitKey(0)
+    for group in train_generator.groups:
+        imgs, anns = train_generator.get_augmented_data(group)
+        for img, ann in zip(imgs, anns):
+            from utils.visualization import draw_annotations
+            # pri  nt(ann)
+            draw_annotations(img, ann)
+            cv2.imshow("img", img)
+            key = cv2.waitKey(0)
+            if key == 27:
+                break
+            cv2.destroyAllWindows()
