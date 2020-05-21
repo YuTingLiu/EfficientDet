@@ -40,13 +40,12 @@ def flir_anns_union(data_dir, set_name):
         else:
             images.append(jd['image'])
         newanns = []
-        if len(jd['annotation']) == 0:
-            print("found empty ann")
-        for ann in jd['annotation']:
-            ann['category_id'] = int(ann['category_id'])
-            if ann['category_id'] in label_ids:
-                newanns.append(ann)
-        annotations.extend(newanns)
+        if len(jd['annotation']) > 0:
+            for ann in jd['annotation']:
+                ann['category_id'] = int(ann['category_id'])
+                if ann['category_id'] in label_ids:
+                    newanns.append(ann)
+            annotations.extend(newanns)
     newanns = []
     for idx, ann in enumerate(annotations):
         ann['id'] = idx
